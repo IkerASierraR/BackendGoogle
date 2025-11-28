@@ -1,29 +1,29 @@
 # ================================
-# Etapa 1: Build con Maven
+# Stage 1: Build with Maven
 # ================================
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copiar pom.xml y descargar dependencias
 COPY pom.xml .
 RUN mvn dependency:go-offline
 
-# Copiar el código fuente y compilar
 COPY src ./src
 RUN mvn clean package -DskipTests
 
 # ================================
-# Etapa 2: Imagen final (runtime)
+# Stage 2: Runtime Image
 # ================================
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
-# Copiar el JAR compilado
 COPY --from=build /app/target/*.jar app.jar
 
-# Render normalmente usa un puerto dinámico (PORT)
-# pero este EXPOSE no afecta, solo documenta el puerto interno usado por Spring Boot
+# Render provides the PORT environment variable
+ENV PORT=8080
+
+# Tell Spring Boot to use Render's PORT dynamically
+ENV JAVA_OPTS="-Dserver.port=${PORT}"
+
 EXPOSE 8080
 
-# Ejecutar el backend
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar app.jar"]
